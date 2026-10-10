@@ -1,0 +1,22 @@
+# Các file môi trường bí mật
+.env
+.env.example
+.env.*
+
+# Thư mục thư viện & log
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Thư mục test coverage
+coverage/
+.nyc_output/
+
+# Cấu hình IDE & Hệ điều hành
+.DS_Store
+.vscode/
+
+# Bỏ qua thư mục test và file README theo yêu cầu
+test/
+README.md

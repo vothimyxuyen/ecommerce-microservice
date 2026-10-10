@@ -1,0 +1,27 @@
+{
+  "name": "product-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RESTful CRUD API for products using Express and MongoDB",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node --watch app.js",
+    "test": "npm run test:unit",
+    "test:unit": "node --test tests/app.test.js",
+    "test:integration": "node --test tests/product.crud.test.js",
+    "test:ci": "npm run test:unit && npm run test:integration",
+    "smoke": "node scripts/smoke-test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mongoose": "^8.9.5"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0"
+  }
+}

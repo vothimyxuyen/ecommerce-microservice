@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  roleId   Int    @id @default(autoincrement()) @map("roleid")
+  rolename String @unique @db.VarChar(50)
+  users    User[]
+
+  @@map("Role")
+}
+
+model Membership {
+  membershipId Int    @id @default(autoincrement()) @map("mid")
+  mname        String @unique @db.VarChar(50)
+  score        Int    @default(10)
+  users        User[]
+
+  @@map("Membership")
+}
+
+model User {
+  uid          Int        @id @default(autoincrement())
+  username     String     @unique @db.VarChar(50)
+  fullname     String     @db.VarChar(100)
+  password     String     @db.VarChar(255)
+  roleId       Int        @map("roleid")
+  membershipId Int        @map("mid")
+  role         Role       @relation(fields: [roleId], references: [roleId], onDelete: Restrict)
+  membership   Membership @relation(fields: [membershipId], references: [membershipId], onDelete: Restrict)
+  orders       Order[]
+
+  @@map("User")
+}
+
+model Product {
+  pid         Int           @id @default(autoincrement())
+  pname       String        @db.VarChar(100)
+  price       Decimal       @db.Decimal(10, 2)
+  quantity    Int
+  orderDetails OrderDetail[]
+
+  @@map("Product")
+}
+
+model Order {
+  oid       Int           @id @default(autoincrement())
+  uid       Int
+  createdAt DateTime      @default(now()) @map("createat") @db.Timestamp(3)
+  user      User          @relation(fields: [uid], references: [uid], onDelete: Restrict)
+  details   OrderDetail[]
+  shipments Shipment[]
+
+  @@map("Order")
+}
+
+model OrderDetail {
+  oid       Int
+  pid       Int
+  qty       Int
+  unitPrice Decimal @map("unit_price") @db.Decimal(10, 2)
+  order     Order   @relation(fields: [oid], references: [oid], onDelete: Cascade)
+  product   Product @relation(fields: [pid], references: [pid], onDelete: Restrict)
+
+  @@id([oid, pid])
+  @@map("OrderDetail")
+}
+
+model Shipment {
+  shipid Int    @id @default(autoincrement())
+  oid    Int
+  status String @db.VarChar(50)
+  order  Order  @relation(fields: [oid], references: [oid], onDelete: Cascade)
+
+  @@map("Shipment")
+}

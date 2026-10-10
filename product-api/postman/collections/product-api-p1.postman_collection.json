@@ -1,0 +1,53 @@
+{
+  "info": {
+    "name": "Product API - P1 MongoDB CRUD",
+    "description": "Chay lan luot health, create, read, update, list va delete product.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3001" },
+    { "key": "productId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": { "method": "GET", "url": "{{baseUrl}}/health" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('MongoDB health is OK', function () { pm.response.to.have.status(200); });"] } }]
+    },
+    {
+      "name": "Create product",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"pid\":\"postman-{{$guid}}\",\"pname\":\"Postman notebook\",\"price\":4.5,\"quantity\":8}" },
+        "url": "{{baseUrl}}/api/products"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Product created', function () { pm.response.to.have.status(201); });", "const product = pm.response.json();", "pm.collectionVariables.set('productId', product.pid);"] } }]
+    },
+    {
+      "name": "Get product",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/products/{{productId}}" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Product found', function () { pm.response.to.have.status(200); });"] } }]
+    },
+    {
+      "name": "Update product",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"pid\":\"{{productId}}\",\"pname\":\"Updated Postman notebook\",\"price\":5,\"quantity\":6}" },
+        "url": "{{baseUrl}}/api/products/{{productId}}"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Product updated', function () { pm.response.to.have.status(200); });"] } }]
+    },
+    {
+      "name": "List products",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/products" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Product list returned', function () { pm.response.to.have.status(200); });"] } }]
+    },
+    {
+      "name": "Delete product",
+      "request": { "method": "DELETE", "url": "{{baseUrl}}/api/products/{{productId}}" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Product deleted', function () { pm.response.to.have.status(204); });"] } }]
+    }
+  ]
+}
