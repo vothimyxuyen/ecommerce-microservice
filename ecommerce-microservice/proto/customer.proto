@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package ecommerce.customer.v1;
+
+service CustomerService {
+  rpc EnsureCustomer(EnsureCustomerRequest) returns (CustomerReply);
+  rpc GetCustomer(GetCustomerRequest) returns (CustomerReply);
+  rpc ListCustomers(Empty) returns (CustomerListReply);
+  rpc CreateCustomer(CustomerInput) returns (CustomerReply);
+  rpc UpdateCustomer(CustomerInput) returns (CustomerReply);
+  rpc DeleteCustomer(GetCustomerRequest) returns (Empty);
+  rpc GetMembership(GetCustomerRequest) returns (MembershipReply);
+  rpc UpdateMembership(UpdateMembershipRequest) returns (MembershipReply);
+  rpc Health(Empty) returns (HealthReply);
+}
+
+message Empty {}
+
+message HealthReply {
+  string status = 1;
+}
+
+message EnsureCustomerRequest {
+  int32 uid = 1;
+  string fullname = 2;
+  int32 age = 3;
+  string address = 4;
+}
+
+message GetCustomerRequest {
+  int32 uid = 1;
+}
+
+message CustomerInput {
+  int32 uid = 1;
+  optional string fullname = 2;
+  optional int32 age = 3;
+  optional string address = 4;
+  optional int32 mid = 5;
+}
+
+message CustomerReply {
+  int32 uid = 1;
+  string fullname = 2;
+  int32 age = 3;
+  string address = 4;
+  int32 mid = 5;
+}
+
+message CustomerListReply {
+  repeated CustomerReply items = 1;
+}
+
+message MembershipReply {
+  int32 mid = 1;
+  string mname = 2;
+  int32 score = 3;
+}
+
+message UpdateMembershipRequest {
+  int32 uid = 1;
+  string mname = 2;
+  int32 score = 3;
+  int32 mid = 4;
+}

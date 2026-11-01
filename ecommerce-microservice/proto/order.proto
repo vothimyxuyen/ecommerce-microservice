@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package ecommerce.order.v1;
+
+service OrderService {
+  rpc CreateOrder(CreateOrderRequest) returns (OrderReply);
+  rpc ListOrders(UserRequest) returns (OrderListReply);
+  rpc GetOrder(OrderIdRequest) returns (OrderReply);
+  rpc Health(Empty) returns (HealthReply);
+}
+
+message Empty {}
+
+message HealthReply {
+  string status = 1;
+}
+
+message UserRequest {
+  int32 uid = 1;
+  string role = 2;
+}
+
+message OrderIdRequest {
+  int64 oid = 1;
+  int32 uid = 2;
+  string role = 3;
+}
+
+message OrderItemInput {
+  int32 pid = 1;
+  int32 qty = 2;
+}
+
+message CreateOrderRequest {
+  int32 uid = 1;
+  string role = 2;
+  string request_id = 3;
+  repeated OrderItemInput items = 4;
+}
+
+message OrderDetailReply {
+  int32 pid = 1;
+  string pname = 2;
+  int32 qty = 3;
+  double unit_price = 4;
+}
+
+message OrderReply {
+  int64 oid = 1;
+  int32 uid = 2;
+  double discount = 3;
+  double subtotal = 4;
+  double discount_amount = 5;
+  double total_amount = 6;
+  string created_at = 7;
+  repeated OrderDetailReply items = 8;
+  string shipment_status = 9;
+}
+
+message OrderListReply {
+  repeated OrderReply items = 1;
+}

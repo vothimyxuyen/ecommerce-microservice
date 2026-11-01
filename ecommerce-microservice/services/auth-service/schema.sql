@@ -1,0 +1,18 @@
+CREATE TABLE IF NOT EXISTS roles (
+  roleid SMALLSERIAL PRIMARY KEY,
+  rolename VARCHAR(50) NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS users (
+  uid BIGSERIAL PRIMARY KEY,
+  username VARCHAR(50) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  roleid SMALLINT NOT NULL REFERENCES roles(roleid) ON DELETE RESTRICT,
+  email VARCHAR(254) UNIQUE,
+  phone VARCHAR(30),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO roles (rolename)
+VALUES ('member'), ('admin'), ('shipment_staff')
+ON CONFLICT (rolename) DO NOTHING;
