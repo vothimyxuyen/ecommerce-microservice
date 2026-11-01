@@ -1,0 +1,107 @@
+{
+  "info": {
+    "name": "E-commerce Microservices MVP - Prompt 3",
+    "description": "REST through the API Gateway. Run in order; fill adminPassword and shipmentPassword from your local .env (do not export those variables).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3003" },
+    { "key": "username", "value": "" },
+    { "key": "password", "value": "Micro-P3-Student-Password-123!" },
+    { "key": "memberToken", "value": "" },
+    { "key": "adminUsername", "value": "admin" },
+    { "key": "adminPassword", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "shipmentUsername", "value": "shipment" },
+    { "key": "shipmentPassword", "value": "" },
+    { "key": "shipmentToken", "value": "" },
+    { "key": "memberUid", "value": "" },
+    { "key": "productId", "value": "" },
+    { "key": "orderId", "value": "" },
+    { "key": "shipmentId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "01 Health check",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/health" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('all dependencies are UP', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('UP'); });"] } }]
+    },
+    {
+      "name": "02 Register member",
+      "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["const guid = pm.variables.replaceIn('{{$guid}}').replace(/-/g, '').slice(0, 12);", "pm.collectionVariables.set('username', `member-${guid}`);"] } }, { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('created account has member role', function () { pm.response.to.have.status(201); pm.expect(pm.response.json().role).to.eql('member'); });", "pm.collectionVariables.set('memberUid', pm.response.json().uid);"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"username\":\"{{username}}\",\"password\":\"{{password}}\",\"email\":\"{{username}}@example.test\",\"fullname\":\"Postman Member\",\"age\":22,\"address\":\"Test address\"}" },
+        "url": "{{baseUrl}}/api/auth/register"
+      }
+    },
+    {
+      "name": "03 Login member",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('member receives JWT', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().accessToken).to.be.a('string').and.not.empty; });", "pm.collectionVariables.set('memberToken', pm.response.json().accessToken);"] } }],
+      "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"username\":\"{{username}}\",\"password\":\"{{password}}\"}" }, "url": "{{baseUrl}}/api/auth/login" }
+    },
+    {
+      "name": "04 Login admin (set password from local .env)",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('admin receives JWT', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().role).to.eql('admin'); });", "pm.collectionVariables.set('adminToken', pm.response.json().accessToken);"] } }],
+      "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"username\":\"{{adminUsername}}\",\"password\":\"{{adminPassword}}\"}" }, "url": "{{baseUrl}}/api/auth/login" }
+    },
+    {
+      "name": "05 Raise member score to 150 (admin)",
+      "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"mid\":2,\"mname\":\"Silver\",\"score\":150}" }, "url": "{{baseUrl}}/api/customers/{{memberUid}}/membership" }
+    },
+    {
+      "name": "06 Create product (admin)",
+      "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('productName', `P3 Product ${pm.variables.replaceIn('{{$guid}}').slice(0, 8)}`);"] } }, { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('product created', function () { pm.response.to.have.status(201); });", "pm.collectionVariables.set('productId', pm.response.json().pid);"] } }],
+      "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"pname\":\"{{productName}}\",\"price\":12.5,\"quantity\":10}" }, "url": "{{baseUrl}}/api/products" }
+    },
+    {
+      "name": "07 Read customer and membership",
+      "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{memberToken}}" }], "url": "{{baseUrl}}/api/customers/{{memberUid}}/membership" }
+    },
+    {
+      "name": "08 Read products",
+      "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{memberToken}}" }], "url": "{{baseUrl}}/api/products" }
+    },
+    {
+      "name": "09 Place order without token (expect 401)",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('missing JWT is rejected', function () { pm.response.to.have.status(401); });"] } }],
+      "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"items\":[{\"pid\":{{productId}},\"qty\":2}]}" }, "url": "{{baseUrl}}/api/orders" }
+    },
+    {
+      "name": "10 Place order with member JWT",
+      "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('idempotencyKey', `postman-${pm.variables.replaceIn('{{$guid}}')}`);", "pm.collectionVariables.set('shipmentPollAttempts', 0);"] } }, { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('order uses 5 percent score discount', function () { pm.response.to.have.status(201); pm.expect(pm.response.json().discount).to.eql(5); pm.expect(pm.response.json().total_amount).to.eql(23.75); });", "pm.collectionVariables.set('orderId', pm.response.json().oid);"] } }],
+      "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{memberToken}}" }, { "key": "Idempotency-Key", "value": "{{idempotencyKey}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"items\":[{\"pid\":{{productId}},\"qty\":2}]}" }, "url": "{{baseUrl}}/api/orders" }
+    },
+    {
+      "name": "11 View order and details",
+      "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{memberToken}}" }], "url": "{{baseUrl}}/api/orders/{{orderId}}" }
+    },
+    {
+      "name": "12 Poll shipment for order",
+      "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["const attempts = Number(pm.collectionVariables.get('shipmentPollAttempts') || 0) + 1;", "pm.collectionVariables.set('shipmentPollAttempts', attempts);"] } }, { "listen": "test", "script": { "type": "text/javascript", "exec": ["const attempts = Number(pm.collectionVariables.get('shipmentPollAttempts'));", "if (pm.response.code === 404 && attempts < 30) { pm.execution.setNextRequest('12 Poll shipment for order'); } else { pm.test('asynchronous shipment exists', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('PENDING'); }); if (pm.response.code === 200) pm.collectionVariables.set('shipmentId', pm.response.json().shipid); }"] } }],
+      "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{memberToken}}" }], "url": "{{baseUrl}}/api/shipments/order/{{orderId}}" }
+    },
+    {
+      "name": "13 Login shipment staff",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('shipment staff receives JWT', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().role).to.eql('shipment_staff'); });", "pm.collectionVariables.set('shipmentToken', pm.response.json().accessToken);"] } }],
+      "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"username\":\"{{shipmentUsername}}\",\"password\":\"{{shipmentPassword}}\"}" }, "url": "{{baseUrl}}/api/auth/login" }
+    },
+    {
+      "name": "14 Update shipment to SHIPPING",
+      "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{shipmentToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"status\":\"SHIPPING\"}" }, "url": "{{baseUrl}}/api/shipments/{{shipmentId}}/status" }
+    },
+    {
+      "name": "15 Update shipment to DELIVERED",
+      "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{shipmentToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"status\":\"DELIVERED\"}" }, "url": "{{baseUrl}}/api/shipments/{{shipmentId}}/status" }
+    },
+    {
+      "name": "16 Confirm delivered shipment",
+      "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{memberToken}}" }], "url": "{{baseUrl}}/api/shipments/{{shipmentId}}" }
+    },
+    {
+      "name": "17 Logout member",
+      "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{memberToken}}" }], "url": "{{baseUrl}}/api/auth/logout" }
+    }
+  ]
+}

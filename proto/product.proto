@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package ecommerce.product.v1;
+
+service ProductService {
+  rpc ListProducts(Empty) returns (ProductListReply);
+  rpc GetProduct(ProductIdRequest) returns (ProductReply);
+  rpc CreateProduct(ProductInput) returns (ProductReply);
+  rpc UpdateProduct(ProductInput) returns (ProductReply);
+  rpc DeleteProduct(ProductIdRequest) returns (Empty);
+  rpc ReserveInventory(ReserveInventoryRequest) returns (ProductReply);
+  rpc CommitReservation(ReleaseInventoryRequest) returns (Empty);
+  rpc ReleaseInventory(ReleaseInventoryRequest) returns (Empty);
+  rpc Health(Empty) returns (HealthReply);
+}
+
+message Empty {}
+
+message HealthReply {
+  string status = 1;
+}
+
+message ProductIdRequest {
+  int32 pid = 1;
+}
+
+message ProductInput {
+  int32 pid = 1;
+  string pname = 2;
+  double price = 3;
+  int32 quantity = 4;
+}
+
+message ProductReply {
+  int32 pid = 1;
+  string pname = 2;
+  double price = 3;
+  int32 quantity = 4;
+}
+
+message ProductListReply {
+  repeated ProductReply items = 1;
+}
+
+message ReserveInventoryRequest {
+  int32 pid = 1;
+  int32 quantity = 2;
+  string reservation_id = 3;
+}
+
+message ReleaseInventoryRequest {
+  string reservation_id = 1;
+}

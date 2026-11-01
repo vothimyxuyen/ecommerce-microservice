@@ -1,0 +1,32 @@
+{
+  "name": "ecommerce-microservice",
+  "version": "1.0.0",
+  "private": true,
+  "description": "E-commerce MVP using Node.js microservices, DDD, gRPC, Kafka and database-per-service",
+  "main": "services/api-gateway/src/server.js",
+  "scripts": {
+    "start": "node services/api-gateway/src/server.js",
+    "test": "node --test tests/*.test.js",
+    "test:unit": "node --test tests/discount.test.js tests/proto-contract.test.js",
+    "test:smoke": "node scripts/smoke-test.js",
+    "proto:check": "node scripts/check-protos.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.13.4",
+    "@grpc/proto-loader": "^0.7.13",
+    "bcryptjs": "^3.0.2",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "kafkajs": "^2.2.4",
+    "mongoose": "^8.9.5",
+    "pg": "^8.13.1",
+    "redis": "^4.7.0"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0"
+  }
+}

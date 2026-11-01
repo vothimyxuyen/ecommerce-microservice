@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package ecommerce.shipment.v1;
+
+service ShipmentService {
+  rpc GetShipment(GetShipmentRequest) returns (ShipmentReply);
+  rpc GetShipmentByOrder(GetShipmentByOrderRequest) returns (ShipmentReply);
+  rpc UpdateShipmentStatus(UpdateShipmentStatusRequest) returns (ShipmentReply);
+  rpc Health(Empty) returns (HealthReply);
+}
+
+message Empty {}
+
+message HealthReply {
+  string status = 1;
+}
+
+message GetShipmentRequest {
+  int64 shipid = 1;
+  int32 uid = 2;
+  string role = 3;
+}
+
+message GetShipmentByOrderRequest {
+  int64 oid = 1;
+  int32 uid = 2;
+  string role = 3;
+}
+
+message UpdateShipmentStatusRequest {
+  int64 shipid = 1;
+  string status = 2;
+}
+
+message ShipmentReply {
+  int64 shipid = 1;
+  int64 oid = 2;
+  int32 uid = 3;
+  string status = 4;
+  string updated_at = 5;
+}

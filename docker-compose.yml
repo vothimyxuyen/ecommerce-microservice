@@ -1,0 +1,291 @@
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE_NAME: api-gateway
+    command: ["node", "services/api-gateway/src/server.js"]
+    restart: unless-stopped
+    environment:
+      GATEWAY_PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:?Set a unique JWT_SECRET in .env}
+      REDIS_URL: redis://redis:6379
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      RATE_LIMIT_WINDOW_SECONDS: ${RATE_LIMIT_WINDOW_SECONDS:-60}
+      PRODUCT_CACHE_TTL_SECONDS: ${PRODUCT_CACHE_TTL_SECONDS:-30}
+      AUTH_GRPC_ADDRESS: auth-service:50051
+      CUSTOMER_GRPC_ADDRESS: customer-service:50052
+      PRODUCT_GRPC_ADDRESS: product-service:50053
+      ORDER_GRPC_ADDRESS: order-service:50054
+      SHIPMENT_GRPC_ADDRESS: shipment-service:50055
+    ports:
+      - "127.0.0.1:${GATEWAY_HOST_PORT:-3003}:3000"
+    depends_on:
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      customer-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      shipment-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE_NAME: auth-service
+    command: ["node", "services/auth-service/src/server.js"]
+    restart: unless-stopped
+    environment:
+      AUTH_DATABASE_URL: postgresql://auth_user:${AUTH_DB_PASSWORD:?Set AUTH_DB_PASSWORD in .env}@auth-postgres:5432/auth_db
+      JWT_SECRET: ${JWT_SECRET:?Set a unique JWT_SECRET in .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      SEED_ADMIN_USERNAME: ${SEED_ADMIN_USERNAME:-admin}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?Set SEED_ADMIN_PASSWORD in .env}
+      SEED_SHIPMENT_USERNAME: ${SEED_SHIPMENT_USERNAME:-shipment}
+      SEED_SHIPMENT_PASSWORD: ${SEED_SHIPMENT_PASSWORD:?Set SEED_SHIPMENT_PASSWORD in .env}
+    depends_on:
+      auth-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "scripts/grpc-healthcheck.js", "auth.proto", "ecommerce.auth.v1", "AuthService", "50051"]
+      interval: 10s
+      timeout: 4s
+      retries: 6
+      start_period: 15s
+
+  customer-service:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE_NAME: customer-service
+    command: ["node", "services/customer-service/src/server.js"]
+    restart: unless-stopped
+    environment:
+      CUSTOMER_MONGODB_URI: mongodb://customer-mongo:27017/customer_db
+    depends_on:
+      customer-mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "scripts/grpc-healthcheck.js", "customer.proto", "ecommerce.customer.v1", "CustomerService", "50052"]
+      interval: 10s
+      timeout: 4s
+      retries: 6
+      start_period: 15s
+
+  product-service:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE_NAME: product-service
+    command: ["node", "services/product-service/src/server.js"]
+    restart: unless-stopped
+    environment:
+      PRODUCT_MONGODB_URI: mongodb://product-mongo:27017/product_db
+    depends_on:
+      product-mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "scripts/grpc-healthcheck.js", "product.proto", "ecommerce.product.v1", "ProductService", "50053"]
+      interval: 10s
+      timeout: 4s
+      retries: 6
+      start_period: 15s
+
+  order-service:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE_NAME: order-service
+    command: ["node", "services/order-service/src/server.js"]
+    restart: unless-stopped
+    environment:
+      ORDER_DATABASE_URL: postgresql://order_user:${ORDER_DB_PASSWORD:?Set ORDER_DB_PASSWORD in .env}@order-postgres:5432/order_db
+      CUSTOMER_GRPC_ADDRESS: customer-service:50052
+      PRODUCT_GRPC_ADDRESS: product-service:50053
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_TOPIC_ORDER_CREATED: order-created
+    depends_on:
+      order-postgres:
+        condition: service_healthy
+      customer-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "scripts/grpc-healthcheck.js", "order.proto", "ecommerce.order.v1", "OrderService", "50054"]
+      interval: 10s
+      timeout: 4s
+      retries: 6
+      start_period: 20s
+
+  shipment-service:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE_NAME: shipment-service
+    command: ["node", "services/shipment-service/src/server.js"]
+    restart: unless-stopped
+    environment:
+      SHIPMENT_MONGODB_URI: mongodb://shipment-mongo:27017/shipment_db
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_TOPIC_ORDER_CREATED: order-created
+    depends_on:
+      shipment-mongo:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "scripts/grpc-healthcheck.js", "shipment.proto", "ecommerce.shipment.v1", "ShipmentService", "50055"]
+      interval: 10s
+      timeout: 4s
+      retries: 6
+      start_period: 20s
+
+  auth-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:?Set AUTH_DB_PASSWORD in .env}
+      POSTGRES_DB: auth_db
+    ports:
+      - "127.0.0.1:${AUTH_POSTGRES_HOST_PORT:-5436}:5432"
+    volumes:
+      - p3_auth_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  order-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: order_user
+      POSTGRES_PASSWORD: ${ORDER_DB_PASSWORD:?Set ORDER_DB_PASSWORD in .env}
+      POSTGRES_DB: order_db
+    ports:
+      - "127.0.0.1:${ORDER_POSTGRES_HOST_PORT:-5437}:5432"
+    volumes:
+      - p3_order_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order_user -d order_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  customer-mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${CUSTOMER_MONGO_HOST_PORT:-27019}:27017"
+    volumes:
+      - p3_customer_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  product-mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${PRODUCT_MONGO_HOST_PORT:-27020}:27017"
+    volumes:
+      - p3_product_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  shipment-mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${SHIPMENT_MONGO_HOST_PORT:-27021}:27017"
+    volumes:
+      - p3_shipment_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${REDIS_HOST_PORT:-6381}:6379"
+    volumes:
+      - p3_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
+  kafka:
+    image: apache/kafka:3.8.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${KAFKA_HOST_PORT:-9094}:9094"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:${KAFKA_HOST_PORT:-9094}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - p3_kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+
+volumes:
+  p3_auth_postgres_data:
+  p3_order_postgres_data:
+  p3_customer_mongo_data:
+  p3_product_mongo_data:
+  p3_shipment_mongo_data:
+  p3_redis_data:
+  p3_kafka_data:
